@@ -13,6 +13,7 @@ describe("full analysis pipeline", () => {
       if (url.pathname.endsWith("/videos")) {
         return jsonResponse({ items: [{ snippet: {
           title: "Vídeo integrado",
+          description: "Contexto do vídeo integrado",
           channelTitle: "Canal integrado",
           thumbnails: { high: { url: "https://img.test/high.jpg" } },
         } }] });
@@ -56,6 +57,7 @@ describe("full analysis pipeline", () => {
     });
     expect(youtubeFetch).toHaveBeenCalledTimes(2);
     expect(openaiCreate).toHaveBeenCalledOnce();
+    expect(openaiCreate.mock.calls[0][0].input).toContain('Descrição em JSON:\n"Contexto do vídeo integrado"');
   });
 });
 

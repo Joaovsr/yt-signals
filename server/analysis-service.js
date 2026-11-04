@@ -23,7 +23,8 @@ export function createAnalysisService({
         throw new AnalysisUnavailableError("at least four comments are required for analysis");
       }
 
-      const draft = await analyzer.analyze(videoId, comments, { signal });
+      const description = normalizeAndTruncate(metadata.description, 5000);
+      const draft = await analyzer.analyze(videoId, comments, { signal, description });
       return buildResult(videoId, metadata, comments, draft, now());
     },
   };

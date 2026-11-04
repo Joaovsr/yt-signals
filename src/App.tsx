@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { InsightGraph } from "./components/InsightGraph";
+import { Logo } from "./components/Logo";
 import { analyzeVideo } from "./lib/api";
 import type { AnalysisResult } from "./lib/analysis";
 import type { GraphNode } from "./lib/graph";
@@ -11,17 +12,6 @@ import {
 } from "./lib/history";
 import "./styles.css";
 
-function Logo() {
-  return (
-    <div className="brand-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-      <i />
-    </div>
-  );
-}
-
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -30,13 +20,42 @@ function formatDate(value: string) {
 }
 
 export default function App() {
-  const [history, setHistory] = useState<SearchHistoryItem[]>(() => readSearchHistory());
-  const [url, setUrl] = useState(() => history[0]?.url ?? "");
-  const [result, setResult] = useState<AnalysisResult | null>(() => history[0]?.result ?? null);
+  const [history, setHistory] = useState<SearchHistoryItem[]>([]);
+  const [url, setUrl] = useState("");
+  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    const requestedId = new URLSearchParams(window.location.search).get("videoId");
+    void readSearchHistory().then((items) => {
+      if (disposed) return;
+      setHistory(items);
+      if (requestedId !== null && !/^[A-Za-z0-9_-]{11}$/.test(requestedId)) {
+        setError("O identificador do vídeo é inválido.");
+        return;
+      }
+      const item = requestedId === null ? items[0] : items.find((entry) => entry.result.video.videoId === requestedId);
+      setUrl(item?.url ?? (requestedId ? `https://www.youtube.com/watch?v=${requestedId}` : ""));
+      setResult(item?.result ?? null);
+      if (requestedId && !item) setError("A análise deste vídeo não está salva. Gere o mapa para analisar novamente.");
+    }).catch(() => { if (!disposed) setError("Não foi possível carregar o histórico."); });
+    const syncHistory = () => {
+      void readSearchHistory().then((items) => {
+        if (disposed) return;
+        setHistory(items);
+        setResult((previous) => previous ? items.find((item) => item.result.video.videoId === previous.video.videoId)?.result ?? previous : null);
+      }).catch(() => { if (!disposed) setError("Não foi possível atualizar o histórico."); });
+    };
+    if (typeof chrome !== "undefined" && chrome.runtime?.id) chrome.storage.onChanged.addListener(syncHistory);
+    return () => {
+      disposed = true;
+      if (typeof chrome !== "undefined" && chrome.runtime?.id) chrome.storage.onChanged.removeListener(syncHistory);
+    };
+  }, []);
 
   useEffect(() => () => {
     const request = activeRequest.current;
@@ -60,8 +79,10 @@ export default function App() {
     setLoading(true);
     try {
       const analysis = await analyzeVideo(submittedUrl, controller.signal);
+      if (activeRequest.current !== controller || controller.signal.aborted) return;
       setResult(analysis);
-      setHistory(rememberSearch(submittedUrl, analysis));
+      const items = await rememberSearch(submittedUrl, analysis);
+      if (activeRequest.current === controller) setHistory(items);
     } catch (caught) {
       if (activeRequest.current === controller) {
         setError(caught instanceof Error ? caught.message : "Falha inesperada ao analisar o vídeo.");
@@ -85,9 +106,13 @@ export default function App() {
     setError(null);
   };
 
-  const clearHistory = () => {
-    clearSearchHistory();
-    setHistory([]);
+  const clearHistory = async () => {
+    try {
+      await clearSearchHistory();
+      setHistory([]);
+    } catch {
+      setError("Não foi possível limpar o histórico.");
+    }
   };
 
   return (
@@ -161,6 +186,8 @@ export default function App() {
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </button>
           </form>
+
+          {result && <section className="takeaways"><p className="kicker">RESUMO · DESCRIÇÃO E COMENTÁRIOS</p><p>{result.video.summary}</p></section>}
 
           {selected ? (
             <section className="node-inspector" aria-live="polite">

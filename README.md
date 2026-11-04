@@ -154,6 +154,40 @@ npm run build
 
 A suíte cobre frontend, cliente do YouTube, análise da OpenAI, validações de domínio, endpoint HTTP e o pipeline completo com serviços externos falsos. Os testes automatizados não consomem as chaves do `.env`.
 
+## Extensão para Chrome — primeira versão local
+
+O código da extensão e seu servidor Node ficam neste projeto. Não é necessário Go. O painel mostra resumo da **descrição do vídeo e dos comentários**, sentimentos da amostra, temas e principais sinais. A análise completa abre em outra aba da própria extensão, usando o resultado já salvo.
+
+1. Configure o `.env` conforme as instruções acima, execute `npm run build` e mantenha `npm start` em um terminal. O servidor local usa `http://127.0.0.1:8080` por padrão.
+2. Em outro terminal, execute `npm run build:extension`.
+3. Abra `chrome://extensions`, ative o modo de desenvolvedor e use **Carregar sem compactação** para selecionar a pasta `dist-extension` deste projeto.
+4. Recarregue o YouTube e clique em **Ver insights** no card de um vídeo da página inicial ou dos resultados de busca. O painel abre sem navegar para o vídeo. O botão também aparece em grades de vídeos de canais e próximo às ações de um vídeo já aberto.
+5. Mantenha o painel aberto durante a análise. Depois, use **Abrir análise completa** para explorar o grafo.
+
+Para usar a API integrada do Vite durante o desenvolvimento, mantenha `npm run dev` aberto e compile o pacote com:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:5173 npm run build:extension
+```
+
+A URL da API é uma configuração pública do build; nunca coloque chaves em variáveis `VITE_*`. O manifest limita as permissões de rede ao YouTube e ao host configurado. Para voltar ao servidor de produção local, compile novamente sem essa variável. Ao alterar código ou configuração, recompile e recarregue a extensão em `chrome://extensions`.
+
+O site continua funcionando com `npm run dev` ou `npm start`. Deixe `VITE_API_BASE_URL` ausente no ambiente do site para usar a API da mesma origem.
+
+### Comportamento e limites da extensão
+
+- Chrome desktop 116 ou superior; outros navegadores ainda precisam de validação.
+- Botão nos cards de vídeos da página inicial, busca e grades de canais, além das páginas `/watch`. Shorts, `/live/`, anúncios, playlists/mixes e mobile não fazem parte do primeiro corte.
+- O painel usa o ID do card selecionado, mesmo quando a aba continua na home ou na busca. Ao mudar a URL da aba, uma seleção de outra página não é reutilizada silenciosamente.
+- Navegar entre vídeos não dispara novas análises. Abrir os insights exige ação do usuário; resultados salvos são reutilizados, e **Atualizar análise** solicita uma nova análise.
+- Histórico local de até seis vídeos em `chrome.storage.local`, compartilhado entre painel e analytics e acessível apenas às páginas da extensão. O histórico antigo do site não é importado nem apagado automaticamente.
+- Ao fechar ou descarregar o painel, a análise pode ser interrompida. Uma nova tentativa deve ser solicitada; não há processamento persistente com a extensão fechada.
+- Se a descrição estiver vazia, o modelo recebe essa informação e deve limitar o resumo aos comentários. Sentimentos, temas, contagens e evidências continuam baseados nos comentários.
+- Uma falha ao salvar mantém o resultado visível e permite tentar salvar novamente sem outra chamada de análise.
+- O pacote local não inclui autenticação ou publicação em loja. Antes de disponibilizar uma API pública, concluir controle de acesso, limites de uso, hospedagem HTTPS e documentação de privacidade.
+
+As verificações automatizadas cobrem navegação simulada, seleção de cards sem abrir vídeos, isolamento de vídeo, persistência concorrente, rejeição de mensagens inválidas e abertura do resultado salvo. O botão foi inspecionado e clicado no Google Chrome real em resultados de busca e na grade pública de um canal. Também foi validado o fluxo com a extensão instalada: o clique abriu o painel, disparou uma única requisição para uma API local simulada e apresentou o resultado. Essas verificações não executaram análises pagas. A home do perfil de inspeção não tinha recomendações personalizadas; seu comportamento é coberto pelos testes com a estrutura dos cards da grade.
+
 ## Limites atuais
 
 - um vídeo por análise;

@@ -101,7 +101,7 @@ describe("App", () => {
   });
 
   it("shows validation and API errors without replacing a previous result", async () => {
-    rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, window.localStorage);
+    await rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, window.localStorage);
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
       error: { code: "comments_unavailable", message: "sem comentários" },
     }, 422));
@@ -116,7 +116,7 @@ describe("App", () => {
 
     expect(screen.getByRole("alert").textContent).toContain("URL do YouTube inválida");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: analysisFixture.video.title })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: analysisFixture.video.title })).toBeTruthy();
 
     await user.clear(input);
     await user.type(input, "https://youtu.be/_RvNczunfsQ");
@@ -124,15 +124,15 @@ describe("App", () => {
 
     expect((await screen.findByRole("alert")).textContent)
       .toContain("não possui comentários suficientes");
-    expect(screen.getByRole("heading", { name: analysisFixture.video.title })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: analysisFixture.video.title })).toBeTruthy();
   });
 
   it("restores a persisted result and clears the history list", async () => {
-    rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, window.localStorage);
+    await rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, window.localStorage);
     const user = userEvent.setup();
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: analysisFixture.video.title })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: analysisFixture.video.title })).toBeTruthy();
     expect(screen.getByText(analysisFixture.video.channel, { exact: false })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Limpar" }));
@@ -142,16 +142,39 @@ describe("App", () => {
   });
 
   it("shows every comment evidence from the selected topic", async () => {
-    rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, window.localStorage);
+    await rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, window.localStorage);
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Selecionar tema" }));
+    await user.click(await screen.findByRole("button", { name: "Selecionar tema" }));
 
     expect(screen.getByText("Evidência 1")).toBeTruthy();
     expect(screen.getByText("Evidência 2")).toBeTruthy();
     expect(screen.getByText("Evidência 3")).toBeTruthy();
     expect(screen.getByText("Evidência 4")).toBeTruthy();
     expect(screen.getByText("Evidência 5")).toBeTruthy();
+  });
+
+  it("opens the requested saved video without making another API request", async () => {
+    await rememberSearch(analysisFixture.video.url, analysisFixture, window.localStorage);
+    window.history.replaceState({}, "", `/?videoId=${analysisFixture.video.videoId}`);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: analysisFixture.video.title })).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("does not fall back to another saved video when the requested analysis is missing", async () => {
+    await rememberSearch(analysisFixture.video.url, analysisFixture, window.localStorage);
+    window.history.replaceState({}, "", "/?videoId=dQw4w9WgXcQ");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    expect((await screen.findByRole("alert")).textContent).toContain("não está salva");
+    expect(screen.queryByRole("heading", { name: analysisFixture.video.title })).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    window.history.replaceState({}, "", "/");
   });
 });

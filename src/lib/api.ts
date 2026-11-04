@@ -31,7 +31,7 @@ export async function analyzeVideo(
     controller.abort();
   }, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
-  const baseUrl = (options.baseUrl ?? "").replace(/\/$/, "");
+  const baseUrl = (options.baseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
   const endpoint = `${baseUrl}/api/v1/videos/${encodeURIComponent(videoId)}/comment-analysis`;
 
   try {

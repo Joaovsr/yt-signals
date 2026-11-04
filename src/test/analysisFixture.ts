@@ -10,7 +10,7 @@ export const analysisFixture: AnalysisResult = {
     channel: "Daniel Barada",
     thumbnail: "https://i.ytimg.com/vi/_RvNczunfsQ/hqdefault.jpg",
     commentCountAnalyzed: 100,
-    summary: "A audiência reconhece a baixa tolerância ao tédio como obstáculo.",
+    summary: "A descrição apresenta a tolerância ao tédio como caminho para o foco; os comentários relatam dificuldades com distrações e valorizam a constância.",
     sentiment: { positive: 70, neutral: 20, negative: 10 },
     tags: Array.from({ length: 4 }, (_, index) => {
       const commentCount = 22 + index * 2;

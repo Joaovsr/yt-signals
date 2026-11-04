@@ -3,7 +3,7 @@ import { analysisFixture } from "../test/analysisFixture";
 import { analyzeVideo } from "./api";
 
 describe("analyzeVideo", () => {
-  it("calls the Go API with the video ID and validates the result", async () => {
+  it("calls the analysis API with the video ID and validates the result", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(
       JSON.stringify(analysisFixture),
       { status: 200, headers: { "Content-Type": "application/json" } },

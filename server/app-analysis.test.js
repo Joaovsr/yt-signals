@@ -50,6 +50,29 @@ describe("comment analysis endpoint", () => {
       },
     });
   });
+
+  it("cancels when the panel disconnects and does not write to the closed response", async () => {
+    let started;
+    const ready = new Promise((resolve) => { started = resolve; });
+    let analysisSignal;
+    const analysisService = { analyze: vi.fn((_video, _limit, { signal }) => {
+      analysisSignal = signal;
+      started();
+      return new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(new Error("cancelled")), { once: true }));
+    }) };
+    const input = Readable.from(['{"maxComments":100}']);
+    input.method = "POST";
+    input.url = "/api/v1/videos/dQw4w9WgXcQ/comment-analysis";
+    const response = new MockResponse();
+    const end = vi.spyOn(response, "end");
+    const pending = createApp({ analysisService, logger: null })(input, response);
+    await ready;
+    response.destroyed = true;
+    response.emit("close");
+    await pending;
+    expect(analysisSignal.aborted).toBe(true);
+    expect(end).not.toHaveBeenCalled();
+  });
 });
 
 async function request(app, { body = { maxComments: 100 } } = {}) {

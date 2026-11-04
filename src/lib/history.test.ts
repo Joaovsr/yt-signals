@@ -19,43 +19,43 @@ class ThrowingStorage extends MemoryStorage {
 }
 
 describe("search history", () => {
-  it("persists and restores an analysis", () => {
+  it("persists and restores an analysis", async () => {
     const storage = new MemoryStorage();
-    rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage);
-    expect(readSearchHistory(storage)).toHaveLength(1);
-    expect(readSearchHistory(storage)[0].result.video.videoId).toBe("_RvNczunfsQ");
+    await rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage);
+    expect(await readSearchHistory(storage)).toHaveLength(1);
+    expect((await readSearchHistory(storage))[0].result.video.videoId).toBe("_RvNczunfsQ");
   });
 
-  it("replaces a previous search for the same video", () => {
+  it("replaces a previous search for the same video", async () => {
     const storage = new MemoryStorage();
-    rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage);
-    rememberSearch("https://www.youtube.com/watch?v=_RvNczunfsQ", analysisFixture, storage);
-    expect(readSearchHistory(storage)).toHaveLength(1);
+    await rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage);
+    await rememberSearch("https://www.youtube.com/watch?v=_RvNczunfsQ", analysisFixture, storage);
+    expect(await readSearchHistory(storage)).toHaveLength(1);
   });
 
-  it("ignores invalid persisted data and can clear history", () => {
+  it("ignores invalid persisted data and can clear history", async () => {
     const storage = new MemoryStorage();
-    storage.setItem("yt-signals:search-history:v1", "not-json");
-    expect(readSearchHistory(storage)).toEqual([]);
-    clearSearchHistory(storage);
+    storage.setItem("yt-signals:search-history:v2", "not-json");
+    expect(await readSearchHistory(storage)).toEqual([]);
+    await clearSearchHistory(storage);
     expect(storage.length).toBe(0);
   });
 
-  it("does not break the app when localStorage is unavailable", () => {
+  it("does not break the app when localStorage is unavailable", async () => {
     const storage = new ThrowingStorage();
-    expect(readSearchHistory(storage)).toEqual([]);
-    expect(() => rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage)).not.toThrow();
-    expect(() => clearSearchHistory(storage)).not.toThrow();
-    expect(readSearchHistory()).toEqual([]);
+    expect(await readSearchHistory(storage)).toEqual([]);
+    await expect(rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage)).resolves.toHaveLength(1);
+    await expect(clearSearchHistory(storage)).resolves.toBeUndefined();
+    expect(await readSearchHistory()).toEqual([]);
   });
 
-  it("rejects persisted entries with invalid dates", () => {
+  it("rejects persisted entries with invalid dates", async () => {
     const storage = new MemoryStorage();
-    rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage);
+    await rememberSearch("https://youtu.be/_RvNczunfsQ", analysisFixture, storage);
     const key = storage.key(0)!;
     const persisted = JSON.parse(storage.getItem(key)!);
     persisted[0].searchedAt = "not-a-date";
     storage.setItem(key, JSON.stringify(persisted));
-    expect(readSearchHistory(storage)).toEqual([]);
+    expect(await readSearchHistory(storage)).toEqual([]);
   });
 });

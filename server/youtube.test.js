@@ -7,6 +7,7 @@ describe("YouTube client", () => {
       items: [{
         snippet: {
           title: "Título",
+          description: "Descrição do criador 🧠",
           channelTitle: "Canal",
           thumbnails: { high: { url: "https://img.test/high.jpg" } },
         },
@@ -20,6 +21,7 @@ describe("YouTube client", () => {
 
     await expect(client.getVideo("_RvNczunfsQ")).resolves.toEqual({
       title: "Título",
+      description: "Descrição do criador 🧠",
       channel: "Canal",
       thumbnail: "https://img.test/high.jpg",
     });
@@ -28,6 +30,7 @@ describe("YouTube client", () => {
     expect(url.pathname).toBe("/v3/videos");
     expect(url.searchParams.get("id")).toBe("_RvNczunfsQ");
     expect(url.searchParams.get("key")).toBe("youtube-secret");
+    expect(url.searchParams.get("part")).toBe("snippet");
   });
 
   it("lists top-level comments and follows pagination", async () => {

@@ -21,6 +21,7 @@ export function createYouTubeClient({
       if (!snippet) throw new Error("YouTube video was not found");
       return {
         title: snippet.title,
+        description: snippet.description ?? "",
         channel: snippet.channelTitle,
         thumbnail: snippet.thumbnails?.high?.url ?? "",
       };

@@ -25,6 +25,7 @@ describe("analysis service", () => {
     const modelComments = analyzer.analyze.mock.calls[0][1];
     expect(Array.from(modelComments[0].text)).toHaveLength(200);
     expect(modelComments[1].text).toBe("texto com espaços");
+    expect(analyzer.analyze.mock.calls[0][2].description).toBe("á".repeat(5000));
   });
 
   it("rejects a comment assigned to two tags", async () => {
@@ -50,7 +51,7 @@ describe("analysis service", () => {
 
 function fakeSource(comments) {
   return {
-    getVideo: vi.fn().mockResolvedValue({ title: "Vídeo teste", channel: "Canal teste" }),
+    getVideo: vi.fn().mockResolvedValue({ title: "Vídeo teste", channel: "Canal teste", description: `  ${"á".repeat(5001)}\n` }),
     listComments: vi.fn().mockResolvedValue(comments),
   };
 }

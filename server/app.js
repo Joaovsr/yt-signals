@@ -121,6 +121,7 @@ function writeError(response, status, code, message) {
 }
 
 export function writeJson(response, status, value) {
+  if (response.destroyed || response.writableEnded) return;
   response.statusCode = status;
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.end(`${JSON.stringify(value)}\n`);
